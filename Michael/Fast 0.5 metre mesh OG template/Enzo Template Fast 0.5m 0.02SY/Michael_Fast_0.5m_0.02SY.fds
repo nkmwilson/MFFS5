@@ -1,0 +1,226 @@
+&HEAD CHID='Michael Fast 0.5m 0.02SY',
+      TITLE='Formative Assignment 1  Atrium Spill Plume, Fast t2 Fire' /
+
+! ===================================================================
+! PURPOSE OF MODEL
+! -------------------------------------------------------------------
+! This model represents a simplified section of the Engineering
+! Building atrium, focusing on smoke spill from a 3rd floor fire
+! beneath a balcony and its impact on 4th floor stair lobby egress.
+!
+! Primary question:
+!   When does smoke render the 4th floor stair lobby door untenable?
+!
+! ===================================================================
+
+
+! ===================================================================
+! MESH
+! -------------------------------------------------------------------
+! Uniform Cartesian mesh
+! Resolution: 0.5 m (~2 cells per metre) --> DO MESH REFINEMENT STUDY
+! ===================================================================
+
+&MESH IJK=42,38,22,
+      XB=0.0,21.0, 0.0,19.0, 0.0,11.0 /
+
+
+! ===================================================================
+! SIMULATION CONTROL
+! -------------------------------------------------------------------
+! Simulation time extended to allow full development of medium
+! and fast t² fires and observation of untenability.
+! ===================================================================
+
+&TIME T_END=300.0 /
+
+
+! ===================================================================
+! MISCELLANEOUS NUMERICAL CONTROLS
+! -------------------------------------------------------------------
+! These settings improve stability and smoke layer definition
+! without changing the physical scenario.
+! Set Radiation FALSE if you a 'fast' simulation
+! ===================================================================
+
+&MISC RADIATION=.TRUE.,
+      TMPA=20.0 /
+
+
+! ===================================================================
+! REACTION
+! -------------------------------------------------------------------
+! Propane used as a clean, well-characterised surrogate fuel.
+! Soot yield representative of a flaming design fire. --> FIND REFERENCE
+! ===================================================================
+
+&REAC ID='PROPANE',
+      FUEL='PROPANE',
+      SOOT_YIELD=0.02 /
+
+
+! ===================================================================
+! FIRE GROWTH – t² FIRES
+! -------------------------------------------------------------------
+! Two growth rates are required by the brief:
+!   - Medium t² fire
+!   - Fast t² fire
+!
+! Fires are assumed to continue growing for the full simulation.
+!
+! Reference (SFPE): --> CONFIRM
+!   Medium:  α = 0.012 kW/s²
+!   Fast:    α = 0.047 kW/s²
+!
+! HRR(t) = α t²
+!
+! The ramps below are normalised (F=1 corresponds to HRRPUA).
+! ===================================================================
+
+! ---------------------------
+! MEDIUM t² FIRE
+! ---------------------------
+&RAMP ID='MEDIUM_T2', T=0.0,   F=0.0 /
+&RAMP ID='MEDIUM_T2', T=150.0, F=1.0 /
+
+! ---------------------------
+! FAST t² FIRE
+! ---------------------------
+&RAMP ID='FAST_T2', T=0.0,  F=0.0 /
+&RAMP ID='FAST_T2', T=75.0, F=1.0 /
+
+
+! ===================================================================
+! SURFACES
+! ===================================================================
+
+! ---------------------------
+! Prescribed HRR burner
+! -------------------------------------------------------------------
+! HRRPUA chosen to give realistic atrium fire magnitude when
+! multiplied by burner area.
+! Ramp can be swapped between MEDIUM_T2 and FAST_T2 for comparison.
+! ---------------------------
+
+&SURF ID='FIRE',
+      HRRPUA=1200.0,
+      RAMP_Q='FAST_T2',   
+      COLOR='RED' /
+
+
+! ---------------------------
+! Leakage surfaces
+! -------------------------------------------------------------------
+! Represents background leakage through doors, cracks, etc.
+! Prevents pressure locking of the domain.
+! ---------------------------
+
+&SURF ID='LEAK',
+      VEL=-0.05 /
+
+
+! ===================================================================
+! GEOMETRY – DO NOT MODIFY (as instructed)
+! ===================================================================
+
+! External enclosure and bottom floor
+&OBST XB=0.0,18.5, 17.0,17.5, 0.0,8.0 /
+&OBST XB=0.0,18.5, 0.0,0.5,  0.0,8.0 /
+&OBST XB=0.0,0.5,  0.0,17.0, 0.0,8.0 /
+&OBST XB=18.0,18.5,0.0,17.0, 0.0,8.0 /
+&OBST XB=0.0,18.5, 0.0,17.5, 0.0,0.5 /
+
+! Intermediate floors and ceilings
+&OBST XB=0.0,11.5, 4.0,17.5, 4.0,4.5 /
+&OBST XB=9.0,18.5, 0.0,9.0,  4.0,4.5 /
+&OBST XB=0.0,18.5, 0.0,17.5, 8.0,8.5 /
+
+! Model offices as closed blocks
+&OBST XB=0.0,6.0,  9.0,12.5,  4.5,8.0 /
+&OBST XB=0.0,11.5, 12.5,17.5, 0.0,8.0 /
+&OBST XB=14.0,18.5, 0.0,7.5,  0.0,8.0 /
+&OBST XB=4.0,9.5,  0.0,4.5,  0.0,8.0 /
+
+! Fire Exit walls
+&OBST XB=0.0,6.5,  7.0,7.5,  0.0,8.0 /
+&OBST XB=8.0,9.5,  7.0,7.5,  0.0,8.0 /
+&OBST XB=9.0,9.5,  4.5,7.5,  0.0,8.0 /
+
+
+
+
+! ===================================================================
+! FIRE LOCATION – 3rd FLOOR UNDER BALCONY
+! -------------------------------------------------------------------
+! Thin burner to approximate a localised fire source.
+! ===================================================================
+
+&VENT XB=14.2,18.0, 8.0,8.5, 0.5,0.5,
+      SURF_ID='FIRE',
+      IOR=3 /
+
+
+! ===================================================================
+! VENTILATION / BOUNDARY CONDITIONS
+! ===================================================================
+
+&VENT MB='ZMAX', SURF_ID='OPEN' /
+&VENT MB='XMIN', SURF_ID='LEAK' /
+&VENT MB='XMAX', SURF_ID='LEAK' /
+&VENT MB='YMIN', SURF_ID='LEAK' /
+&VENT MB='YMAX', SURF_ID='LEAK' /
+
+
+! ===================================================================
+! OUTPUTS – DATA FOR PLOTS
+! ===================================================================
+
+! ---------------------------
+! Slice files for interpretation
+! ---------------------------
+
+&SLCF PBZ=6.5, QUANTITY='TEMPERATURE' /
+&SLCF PBZ=6.5, QUANTITY='VISIBILITY', SPEC_ID='SOOT' /
+&SLCF PBX=14.0, QUANTITY='VELOCITY' /
+
+
+! ---------------------------
+! Devices at 4th floor stair lobby door
+! -------------------------------------------------------------------
+! Head height assumed = +1.9 m
+! 4th floor head height approx 6.5m
+! These are the points used to determine untenability and ASET.
+! ---------------------------
+
+&DEVC ID='DOOR_TEMP',
+      XYZ=7.5,7.0,6.5,
+      QUANTITY='TEMPERATURE' /
+
+&DEVC ID='DOOR_VIS',
+      XYZ=7.5,7.0,6.5,
+      QUANTITY='VISIBILITY',
+      SPEC_ID='SOOT' /
+
+! Optional: smoke layer height indicator
+&DEVC ID='LAYER_HEIGHT_DOOR',
+      XB=7.0,7.5, 7.0,7.5, 4.5,8.0,
+      QUANTITY='LAYER HEIGHT' /
+
+
+
+! ===================================================================
+! INTERPRETATION NOTES
+! -------------------------------------------------------------------
+! Untenability criteria:
+!   - Visibility < 10 m  → primary criterion
+!   - Temperature > 60°C → secondary check
+!
+! ASET definition:
+!   ASET = time at which first untenability criterion
+!          is exceeded at the stair lobby door.
+!
+! Comparison:
+!   Repeat simulation with RAMP_Q='FAST_T2' and compare ASET.
+! ===================================================================
+
+&TAIL /
